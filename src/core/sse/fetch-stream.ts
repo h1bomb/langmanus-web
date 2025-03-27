@@ -1,46 +1,63 @@
+import { NetworkException } from "~/core/exceptions";
+
 import { type StreamEvent } from "./StreamEvent";
 
 export async function* fetchStream<T extends StreamEvent>(
   url: string,
   init: RequestInit,
 ): AsyncIterable<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-cache",
-    },
-    ...init,
-  });
-  if (response.status !== 200) {
-    throw new Error(`Failed to fetch from ${url}: ${response.status}`);
-  }
-  // Read from response body, event by event. An event always ends with a '\n\n'.
-  const reader = response.body
-    ?.pipeThrough(new TextDecoderStream())
-    .getReader();
-  if (!reader) {
-    throw new Error("Response body is not readable");
-  }
-  let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+      },
+      ...init,
+    });
+    if (response.status !== 200) {
+      throw new NetworkException(`Request failed with status ${response.status}`, {
+        metadata: { url, status: response.status }
+      });
     }
-    buffer += value;
+    // Read from response body, event by event. An event always ends with a '\n\n'.
+    const reader = response.body
+      ?.pipeThrough(new TextDecoderStream())
+      .getReader();
+    if (!reader) {
+      throw new NetworkException("Response body is not readable", {
+        metadata: { url }
+      });
+    }
+    let buffer = "";
     while (true) {
-      const index = buffer.indexOf("\n\n");
-      if (index === -1) {
+      const { done, value } = await reader.read();
+      if (done) {
         break;
       }
-      const chunk = buffer.slice(0, index);
-      buffer = buffer.slice(index + 2);
-      const event = parseEvent<T>(chunk);
-      if (event) {
-        yield event;
+      buffer += value;
+      while (true) {
+        const index = buffer.indexOf("\n\n");
+        if (index === -1) {
+          break;
+        }
+        const chunk = buffer.slice(0, index);
+        buffer = buffer.slice(index + 2);
+        const event = parseEvent<T>(chunk);
+        if (event) {
+          yield event;
+        }
       }
     }
+  } catch (error) {
+    // 将原始错误包装为NetworkException
+    if (error instanceof NetworkException) {
+      throw error;
+    }
+    throw new NetworkException("Network connection error during stream reading", { 
+      cause: error instanceof Error ? error : new Error(String(error)),
+      metadata: { url }
+    });
   }
 }
 

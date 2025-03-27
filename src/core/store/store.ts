@@ -1,17 +1,23 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 
-import {
-  type ChatEvent,
-  chatStream,
-  queryTeamMembers,
-  type TeamMember,
+import { 
+  ExceptionHandler, 
+  NetworkException, 
+  UnexpectedException 
+} from "~/core/exceptions";
+
+import { 
+  type ChatEvent, 
+  chatStream, 
+  type TeamMember, 
+  queryTeamMembers 
 } from "../api";
 import { chatStream as mockChatStream } from "../api/mock";
-import {
-  type WorkflowMessage,
-  type Message,
-  type TextMessage,
+import { 
+  type WorkflowMessage, 
+  type Message, 
+  type TextMessage 
 } from "../messaging";
 import { clone } from "../utils";
 import { WorkflowEngine } from "../workflow";
@@ -166,7 +172,22 @@ export async function sendMessage(
     if (e instanceof DOMException && e.name === "AbortError") {
       return;
     }
-    throw e;
+    // 使用ExceptionHandler处理异常
+    if (e instanceof NetworkException || e instanceof Error) {
+      ExceptionHandler.handle(e, {
+        showToast: true,
+        silent: false,
+      });
+    } else {
+      // 未知错误，包装为UnexpectedException
+      ExceptionHandler.handle(
+        new UnexpectedException("消息发送失败，请检查网络连接", {
+          cause: e instanceof Error ? e : undefined,
+          metadata: { message }
+        }),
+        { showToast: true }
+      );
+    }
   } finally {
     setResponding(false);
   }
