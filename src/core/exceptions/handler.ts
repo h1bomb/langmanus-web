@@ -3,18 +3,19 @@
  * Handles different types of exceptions with unified error handling logic
  */
 
-import { toast } from 'sonner';
+import { toast } from "sonner";
 
-import { logger } from './logger';
-import { 
+import {
   ApiException,
   AuthException,
   BaseException,
   BusinessException,
   NetworkException,
   UnexpectedException,
-  WorkflowException 
-} from './types';
+  WorkflowException,
+} from "./types";
+
+import { logger } from "./index";
 
 /**
  * Exception Handler
@@ -27,45 +28,45 @@ export class ExceptionHandler {
    * @param options Handling options
    */
   static handle(
-    error: unknown, 
-    options: { 
+    error: unknown,
+    options: {
       showToast?: boolean;
-      silent?: boolean; 
+      silent?: boolean;
       redirect?: string;
       callback?: (error: Error) => void;
-    } = {}
+    } = {},
   ): Error {
     const { showToast = true, silent = false, redirect, callback } = options;
-    
+
     // Ensure we're dealing with an Error object
     const normalizedError = this.normalizeError(error);
-    
+
     // Log the error
     if (!silent) {
       this.logError(normalizedError);
     }
-    
+
     // Show toast notification
     if (showToast) {
       this.showErrorNotification(normalizedError);
     }
-    
+
     // Execute callback
-    if (callback && typeof callback === 'function') {
+    if (callback && typeof callback === "function") {
       callback(normalizedError);
     }
-    
+
     // Redirect if needed
     if (redirect) {
       // Only in browser environment
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.location.href = redirect;
       }
     }
-    
+
     return normalizedError;
   }
-  
+
   /**
    * Normalize any error object to an Error instance
    */
@@ -73,22 +74,22 @@ export class ExceptionHandler {
     if (error instanceof Error) {
       return error;
     }
-    
-    if (typeof error === 'string') {
+
+    if (typeof error === "string") {
       return new Error(error);
     }
-    
+
     if (error === null || error === undefined) {
-      return new Error('Unknown error');
+      return new Error("Unknown error");
     }
-    
+
     try {
       return new Error(JSON.stringify(error));
     } catch {
-      return new Error('Error object cannot be serialized');
+      return new Error("Error object cannot be serialized");
     }
   }
-  
+
   /**
    * Log the error
    */
@@ -96,14 +97,14 @@ export class ExceptionHandler {
     if (error instanceof BaseException) {
       logger.error(`[${error.name}] ${error.message}`, {
         cause: error.cause,
-        metadata: error.metadata
+        metadata: error.metadata,
       });
       return;
     }
-    
+
     logger.error(error.message, { error });
   }
-  
+
   /**
    * Show appropriate notification based on error type
    */
@@ -125,23 +126,23 @@ export class ExceptionHandler {
       toast.error(`Error: ${error.message}`);
     }
   }
-  
+
   /**
    * Catch exceptions in async functions
    * @param fn Async function to execute
    * @param options Exception handling options
    */
   static async tryAsync<T>(
-    fn: () => Promise<T>, 
-    options: { 
-      showToast?: boolean; 
-      silent?: boolean; 
+    fn: () => Promise<T>,
+    options: {
+      showToast?: boolean;
+      silent?: boolean;
       fallbackValue?: T;
       callback?: (error: Error) => void;
-    } = {}
+    } = {},
   ): Promise<T | undefined> {
     const { fallbackValue, ...handlerOptions } = options;
-    
+
     try {
       return await fn();
     } catch (error) {

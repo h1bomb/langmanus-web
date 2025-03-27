@@ -3,13 +3,8 @@
  * Provides a unified logging interface that can be configured for different environments
  */
 
-// Log levels
-export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error',
-}
+import type { ILogger, LogLevel } from "./types";
+import { LogLevel as LogLevelEnum } from "./types";
 
 // Log entry interface
 interface LogEntry {
@@ -20,39 +15,39 @@ interface LogEntry {
 }
 
 // Logger class
-export class Logger {
+export class Logger implements ILogger {
   private isDevelopment: boolean;
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
+    this.isDevelopment = process.env.NODE_ENV !== "production";
   }
 
   /**
    * Log debug level message
    */
   debug(message: string, data?: unknown): void {
-    this.log(LogLevel.DEBUG, message, data);
+    this.log(LogLevelEnum.DEBUG, message, data);
   }
 
   /**
    * Log info level message
    */
   info(message: string, data?: unknown): void {
-    this.log(LogLevel.INFO, message, data);
+    this.log(LogLevelEnum.INFO, message, data);
   }
 
   /**
    * Log warning level message
    */
   warn(message: string, data?: unknown): void {
-    this.log(LogLevel.WARN, message, data);
+    this.log(LogLevelEnum.WARN, message, data);
   }
 
   /**
    * Log error level message
    */
   error(message: string, data?: unknown): void {
-    this.log(LogLevel.ERROR, message, data);
+    this.log(LogLevelEnum.ERROR, message, data);
   }
 
   /**
@@ -84,23 +79,23 @@ export class Logger {
    */
   private writeToConsole(entry: LogEntry): void {
     const { level, message, timestamp, data } = entry;
-    
+
     // Choose different console methods based on log level
     switch (level) {
-      case LogLevel.DEBUG:
-        console.debug(`[${timestamp}] [DEBUG] ${message}`, data ?? '');
+      case LogLevelEnum.DEBUG:
+        console.debug(`[${timestamp}] [DEBUG] ${message}`, data ?? "");
         break;
-      case LogLevel.INFO:
-        console.info(`[${timestamp}] [INFO] ${message}`, data ?? '');
+      case LogLevelEnum.INFO:
+        console.info(`[${timestamp}] [INFO] ${message}`, data ?? "");
         break;
-      case LogLevel.WARN:
-        console.warn(`[${timestamp}] [WARN] ${message}`, data ?? '');
+      case LogLevelEnum.WARN:
+        console.warn(`[${timestamp}] [WARN] ${message}`, data ?? "");
         break;
-      case LogLevel.ERROR:
-        console.error(`[${timestamp}] [ERROR] ${message}`, data ?? '');
+      case LogLevelEnum.ERROR:
+        console.error(`[${timestamp}] [ERROR] ${message}`, data ?? "");
         break;
       default:
-        console.log(`[${timestamp}] [${String(level)}] ${message}`, data ?? '');
+        console.log(`[${timestamp}] [${String(level)}] ${message}`, data ?? "");
     }
   }
 }
