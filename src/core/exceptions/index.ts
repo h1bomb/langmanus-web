@@ -23,9 +23,7 @@ export function CatchError(
     fallbackValue?: any;
   } = {},
 ) {
-  return function (
-    descriptor: PropertyDescriptor,
-  ) {
+  return function (descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
 
     descriptor.value = function (...args: any[]) {
