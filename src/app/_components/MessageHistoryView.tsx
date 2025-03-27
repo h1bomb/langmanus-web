@@ -1,5 +1,6 @@
 import Markdown from "react-markdown";
 
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { type Message } from "~/core/messaging";
 import { cn } from "~/core/utils";
 
@@ -56,6 +57,16 @@ function MessageView({ message }: { message: Message }) {
         className="mb-8"
         workflow={message.content.workflow}
       />
+    );
+  } else if (message.type === "error") {
+    // Display error message
+    return (
+      <div className="mb-8 max-w-[560px]">
+        <Alert variant={message.content.variant ?? "destructive"}>
+          <AlertTitle>{message.content.title}</AlertTitle>
+          <AlertDescription>{message.content.description}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
   return null;

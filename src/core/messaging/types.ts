@@ -17,4 +17,15 @@ export interface TextMessage extends GenericMessage<"text", string> {}
 export interface WorkflowMessage
   extends GenericMessage<"workflow", { workflow: Workflow }> {}
 
-export type Message = TextMessage | WorkflowMessage;
+// Add error message type
+export interface ErrorMessage
+  extends GenericMessage<
+    "error",
+    {
+      title: string;
+      description: string;
+      variant?: "default" | "destructive";
+    }
+  > {}
+
+export type Message = TextMessage | WorkflowMessage | ErrorMessage;

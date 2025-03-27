@@ -16,9 +16,12 @@ export async function* fetchStream<T extends StreamEvent>(
       ...init,
     });
     if (response.status !== 200) {
-      throw new NetworkException(`Request failed with status ${response.status}`, {
-        metadata: { url, status: response.status }
-      });
+      throw new NetworkException(
+        `Request failed with status ${response.status}`,
+        {
+          metadata: { url, status: response.status },
+        },
+      );
     }
     // Read from response body, event by event. An event always ends with a '\n\n'.
     const reader = response.body
@@ -26,7 +29,7 @@ export async function* fetchStream<T extends StreamEvent>(
       .getReader();
     if (!reader) {
       throw new NetworkException("Response body is not readable", {
-        metadata: { url }
+        metadata: { url },
       });
     }
     let buffer = "";
@@ -54,10 +57,13 @@ export async function* fetchStream<T extends StreamEvent>(
     if (error instanceof NetworkException) {
       throw error;
     }
-    throw new NetworkException("Network connection error during stream reading", { 
-      cause: error instanceof Error ? error : new Error(String(error)),
-      metadata: { url }
-    });
+    throw new NetworkException(
+      "Network connection error during stream reading",
+      {
+        cause: error instanceof Error ? error : new Error(String(error)),
+        metadata: { url },
+      },
+    );
   }
 }
 

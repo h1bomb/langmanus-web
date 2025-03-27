@@ -1,23 +1,23 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 
-import { 
-  ExceptionHandler, 
-  NetworkException, 
-  UnexpectedException 
+import {
+  ExceptionHandler,
+  NetworkException,
+  UnexpectedException,
 } from "~/core/exceptions";
 
-import { 
-  type ChatEvent, 
-  chatStream, 
-  type TeamMember, 
-  queryTeamMembers 
+import {
+  type ChatEvent,
+  chatStream,
+  type TeamMember,
+  queryTeamMembers,
 } from "../api";
 import { chatStream as mockChatStream } from "../api/mock";
-import { 
-  type WorkflowMessage, 
-  type Message, 
-  type TextMessage 
+import {
+  type WorkflowMessage,
+  type Message,
+  type TextMessage,
 } from "../messaging";
 import { clone } from "../utils";
 import { WorkflowEngine } from "../workflow";
@@ -172,22 +172,53 @@ export async function sendMessage(
     if (e instanceof DOMException && e.name === "AbortError") {
       return;
     }
-    // 使用ExceptionHandler处理异常
+
+    // Create error message object
+    const errorId = `error-${Date.now()}`;
+    let errorTitle = "Failed to send message";
+    let errorDescription = "Please check your network connection and try again";
+
+    // Customize error message based on exception type
+    if (e instanceof NetworkException) {
+      errorTitle = "Network Connection Error";
+      errorDescription = e.message;
+    } else if (e instanceof Error) {
+      errorDescription = e.message || errorDescription;
+    }
+
+    // Add error message to message list
+    const errorMessage = {
+      id: errorId,
+      role: "assistant" as const,
+      type: "error" as const,
+      content: {
+        title: errorTitle,
+        description: errorDescription,
+        variant: "destructive" as const,
+      },
+    };
+    addMessage(errorMessage);
+
+    // Use ExceptionHandler to handle exceptions
     if (e instanceof NetworkException || e instanceof Error) {
       ExceptionHandler.handle(e, {
         showToast: true,
         silent: false,
       });
     } else {
-      // 未知错误，包装为UnexpectedException
+      // Unknown error, wrap as UnexpectedException
       ExceptionHandler.handle(
-        new UnexpectedException("消息发送失败，请检查网络连接", {
-          cause: e instanceof Error ? e : undefined,
-          metadata: { message }
-        }),
-        { showToast: true }
+        new UnexpectedException(
+          "Failed to send message, please check your network connection",
+          {
+            cause: e instanceof Error ? e : undefined,
+            metadata: { message },
+          },
+        ),
+        { showToast: true },
       );
     }
+    // Do not rethrow exceptions, let exception handler process it completely
   } finally {
     setResponding(false);
   }
