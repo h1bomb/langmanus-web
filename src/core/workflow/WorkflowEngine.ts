@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 
 import { type ChatEvent, type StartOfWorkflowEvent } from "../api";
+import { CatchError } from "../exceptions";
 
 import { type WorkflowStep } from "./steps";
 import { type ThinkingTask, type ToolCallTask } from "./tasks";
@@ -26,6 +27,11 @@ export class WorkflowEngine {
     return workflow;
   }
 
+  @CatchError<AsyncGenerator<Workflow, void, unknown>>({
+    fallbackValue: (async function* () {
+      yield { id: "error", name: "Error", steps: [], isCompleted: true };
+    })(),
+  })
   async *run(stream: AsyncIterable<ChatEvent>) {
     if (!this.workflow) {
       throw new Error("Workflow not started");

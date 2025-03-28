@@ -16,32 +16,61 @@ export * from "./handler";
 import { ExceptionHandler } from "./handler";
 
 // Exception catching decorator (for class methods)
-export function CatchError(
+export function CatchError<R = unknown, Args extends unknown[] = unknown[]>(
   options: {
-    showToast?: boolean;
-    silent?: boolean;
-    fallbackValue?: any;
+    fallbackValue?: R;
   } = {},
 ) {
-  return function (descriptor: PropertyDescriptor) {
+  return function (
+    target: object,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
     const originalMethod = descriptor.value;
+    if (!originalMethod) return descriptor;
 
-    descriptor.value = function (...args: any[]) {
+    const className = target.constructor.name;
+
+    descriptor.value = function (this: unknown, ...args: Args): R | Promise<R> {
       try {
         const result = originalMethod.apply(this, args);
 
         // If Promise, handle async errors
         if (result instanceof Promise) {
-          return result.catch((error) => {
-            ExceptionHandler.handle(error, options);
-            return options.fallbackValue;
+          return result.catch((error: unknown) => {
+            // Use class name and method name to enhance error message
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+
+            const enhancedError = new Error(
+              `Error in ${className}.${propertyKey}: ${errorMessage}`,
+            );
+
+            if (error instanceof Error && error.stack) {
+              enhancedError.stack = error.stack;
+            }
+
+            ExceptionHandler.handle(enhancedError);
+            return options.fallbackValue as R;
           });
         }
 
         return result;
-      } catch (error) {
-        ExceptionHandler.handle(error, options);
-        return options.fallbackValue;
+      } catch (error: unknown) {
+        // 使用类名和方法名增强错误信息
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
+        const enhancedError = new Error(
+          `Error in ${className}.${propertyKey}: ${errorMessage}`,
+        );
+
+        if (error instanceof Error && error.stack) {
+          enhancedError.stack = error.stack;
+        }
+
+        ExceptionHandler.handle(enhancedError);
+        return options.fallbackValue as R;
       }
     };
 
@@ -53,17 +82,15 @@ export function CatchError(
 export function tryCatch<T>(
   fn: () => T,
   options: {
-    showToast?: boolean;
-    silent?: boolean;
     fallbackValue?: T;
   } = {},
 ): T | undefined {
-  const { fallbackValue, ...handlerOptions } = options;
+  const { fallbackValue } = options;
 
   try {
     return fn();
-  } catch (error) {
-    ExceptionHandler.handle(error, handlerOptions);
+  } catch (error: unknown) {
+    ExceptionHandler.handle(error);
     return fallbackValue;
   }
 }
