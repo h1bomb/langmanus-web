@@ -3,8 +3,6 @@
  * Handles different types of exceptions with unified error handling logic
  */
 
-import { toast } from "sonner";
-
 import {
   ApiException,
   AuthException,
@@ -17,11 +15,34 @@ import {
 
 import { logger } from "./index";
 
+// Error notification type
+export type ErrorNotificationFn = (
+  errorType: string,
+  message: string,
+  details?: Record<string, unknown>,
+) => void;
+
+// Default no-op notification function
+const noopNotification: ErrorNotificationFn = () => {
+  // No operation, intentionally empty
+};
+
 /**
  * Exception Handler
  * Provides unified error handling for different types of exceptions
  */
 export class ExceptionHandler {
+  // Global notification handler
+  private static notificationHandler: ErrorNotificationFn = noopNotification;
+
+  /**
+   * Set a global notification handler
+   * @param handler Notification function to use globally
+   */
+  static setGlobalNotificationHandler(handler: ErrorNotificationFn): void {
+    this.notificationHandler = handler;
+  }
+
   /**
    * Handle an exception
    * @param error The error object
@@ -34,9 +55,16 @@ export class ExceptionHandler {
       silent?: boolean;
       redirect?: string;
       callback?: (error: Error) => void;
+      notificationFn?: ErrorNotificationFn;
     } = {},
   ): Error {
-    const { showToast = true, silent = false, redirect, callback } = options;
+    const {
+      showToast = true,
+      silent = false,
+      redirect,
+      callback,
+      notificationFn = this.notificationHandler,
+    } = options;
 
     // Ensure we're dealing with an Error object
     const normalizedError = this.normalizeError(error);
@@ -46,9 +74,9 @@ export class ExceptionHandler {
       this.logError(normalizedError);
     }
 
-    // Show toast notification
+    // Show notification
     if (showToast) {
-      this.showErrorNotification(normalizedError);
+      this.showErrorNotification(normalizedError, notificationFn);
     }
 
     // Execute callback
@@ -108,22 +136,27 @@ export class ExceptionHandler {
   /**
    * Show appropriate notification based on error type
    */
-  private static showErrorNotification(error: Error): void {
+  private static showErrorNotification(
+    error: Error,
+    notificationFn: ErrorNotificationFn,
+  ): void {
     // Customize message based on error type
     if (error instanceof ApiException) {
-      toast.error(`API Error (${error.statusCode}): ${error.message}`);
+      notificationFn("API Error", error.message, {
+        statusCode: error.statusCode,
+      });
     } else if (error instanceof NetworkException) {
-      toast.error(`Network Error: ${error.message}`);
+      notificationFn("Network Error", error.message, error.metadata);
     } else if (error instanceof AuthException) {
-      toast.error(`Authentication Error: ${error.message}`);
+      notificationFn("Authentication Error", error.message, error.metadata);
     } else if (error instanceof BusinessException) {
-      toast.error(`Business Error: ${error.message}`);
+      notificationFn("Business Error", error.message, error.metadata);
     } else if (error instanceof WorkflowException) {
-      toast.error(`Workflow Error: ${error.message}`);
+      notificationFn("Workflow Error", error.message, error.metadata);
     } else if (error instanceof UnexpectedException) {
-      toast.error(`Unexpected Error: ${error.message}`);
+      notificationFn("Unexpected Error", error.message, error.metadata);
     } else {
-      toast.error(`Error: ${error.message}`);
+      notificationFn("Error", error.message);
     }
   }
 
@@ -139,6 +172,7 @@ export class ExceptionHandler {
       silent?: boolean;
       fallbackValue?: T;
       callback?: (error: Error) => void;
+      notificationFn?: ErrorNotificationFn;
     } = {},
   ): Promise<T | undefined> {
     const { fallbackValue, ...handlerOptions } = options;
